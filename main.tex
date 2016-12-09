@@ -1,4 +1,7 @@
 \documentclass{bioinfo}
+
+\usepackage{fancyvrb}
+
 \copyrightyear{2016} \pubyear{2016}
 
 \access{Advance Access Publication Date: Day Month Year}
@@ -6,6 +9,12 @@
 
 \usepackage{url}
 
+% Definitions
+\newcommand\make{{\tt make}}
+\newcommand\Makefile{{\tt Makefile}}
+\newcommand\biomake{{\tt biomake}}
+
+% Document
 \begin{document}
 \firstpage{1}
 
@@ -35,18 +44,129 @@ None.
 
 \maketitle
 
-\section{Introduction}
-
-Bioinformatics in-the-large \citep{ParkerGorlickLee2003}
-
-\begin{methods}
 \section{Methods}
 
-\end{methods}
+The familiar Unix \make\ utility has become a favored tool for ``bioinformatics in-the-large'' \citep{ParkerGorlickLee2003}.
+Alongside many more elaborate workflow management systems, \make\ holds its own for several reasons.
+Besides being ubiquitous and easy to use, with a simple syntax, it offers a powerful mix
+of {\em declarative logic} (the specification of target-dependency relationships at the head of \Makefile\ recipes, from which \make\ deduces build chains)
+with {\em Unix scripting} (the lines of shell script that make up the body of recipes).
+GNU Make combines these elements with {\em functional programming}-inspired manipulation of text variables, lists, and directories
+(GNU Make offers a number of built-in functions for such purposes, and includes Guile --- GNU's Scheme interpreter --- as an extension language).
 
-\section{Results and Discussion}
+In our usage of \make\ for data analysis, a common pattern is to analyze one or two examples manually, building up a \Makefile\ recipe (or set of recipes),
+then to scale the analysis up to the whole dataset.
+GNU Make remains, in our opinion, unrivalled for this purpose.
+However, its origins were as a tool for managing build pipelines, not large-scale data analyses, and it has several flaws that impede its use in bioinformatics.
 
-\section{Availability}
+We have developed a new tool, \biomake, that keeps the best features of \make\ (including the ability to read a GNU \Makefile) while addressing its shortcomings.
+Chief innovations of \biomake\ include:
+
+{\bf (1) MD5 hashes as an alternative to time-stamps.}
+\make\ uses file modification times to determine when files need to be rebuilt.
+This is fragile, especially on networked filesystems or cloud storage, where file timestamps may not be preserved or synchronized.
+In projects where a big data analysis can take hours or days, a spurious rebuild can be devastating, especially if it triggers further rebuilding of downstream targets.
+Instead of using timestamps, \biomake\ can be directed to use MD5 checksums: whenever a target is built, the MD5 hashes of that file and its dependents are recorded
+and stored. This can be used in combination with \Makefile\ recipes that sort or canonicalize data to further prevent spurious rebuilds.
+For example, in the \Makefile\ snippet shown in Figure~1,
+if {\tt sortfasta} is a utility that sorts sequences in a FASTA file and regularizes them to 50 characters per line, then changing the sequence order or formatting
+of a file {\tt seqs.fasta} will not cause the BLAST job for {\tt seqs.blast} to be re-run.
+
+\begin{figure}
+\begin{Verbatim}[frame=single]
+%.sorted.fasta: %.fasta
+    sortfasta $< >$@
+
+%.blast: %.sorted.fasta
+    blastn -db $(DATABASE) -query $< >$@
+\end{Verbatim}
+\caption{
+  A hypothetical \Makefile\ that sorts a sequence file before BLASTing it.
+  If MD5 hashes (rather than timestamps) are used to trigger builds, as is an option in \biomake,
+  then a reformatting of the {\tt .fasta} file that leads to an identical {\tt .sorted.fasta} file
+  will not trigger a rebuild of the {\tt .blast} file, even if the timestamps have changed.
+}
+\end{figure}
+
+{\bf (2) Support for cluster-based job queues.}
+\make\ can run multiple jobs in parallel, but only on one machine.
+It is possible to write cluster support directly into the \Makefile,
+wrapping each recipe with a call to a job submission script,
+but this spoils \make's otherwise clean separation of concerns
+and often prevents it from tracking dependencies properly.
+\biomake\ has built-in support for Sun Grid Engine, PBS, and SLURM job submission systems,
+including dependency tracking (ensuring a target is not built until all its dependents have been built).
+It also (like GNU Make) offers built-in parallel execution on
+the same machine that \biomake\ is being run on.
+
+{\bf (3) Multiple wildcards per filename.}
+\make\ only allows a single wildcard (``stems'') in a filename,
+represented by the percent symbol ({\tt \%}) in the head of a recipe and by the automatic variable {\tt \$*} in the body.
+In contrast, \biomake\ allows multiple wildcards: any unbound variable that appears in the head of a rule can serve as a wildcard.
+For example, the recipe in Figure~2 creates an alignment file {\tt \$X.\$Y.alignment} from any two files {\tt \$X.fasta} and {\tt \$Y.fasta}.
+
+\begin{figure}
+\begin{Verbatim}[frame=single]
+$X.$Y.alignment: $X.fasta $Y.fasta
+    align $X $Y >$@
+\end{Verbatim}
+\caption{
+  A hypothetical \Makefile\ that aligns two sequence files.
+  In \biomake, if the variables {\tt \$X} and {\tt \$Y} are unbound, then they will be treated as filesystem wildcards
+  for the purpose of matching this rule.
+}
+\end{figure}
+
+{\bf (4) Facile integration with ontologies and description logics.}
+GNU Make's domain-specific language extensions are based on Scheme, which is a functional language,
+but the underlying structure of a Makefile (rules such as ``{\em to build A, you must first build B}'' and ``{\em to build B, you must first build C and D}'')
+is a logic program.
+\biomake's domain-specific language is Prolog, making it trivially easy to incorporate ontologies and description logics.
+For example, we can easily create \biomake\ recipes for targets such as ``{\em the whole-genome alignment for species X and Y, where X is a mammal and Y is a vertebrate}''
+or ``{\em the GFF file containing co-ordinates of every human genomic feature of type T, where T is a term descended from ``biological-region'' in the Sequence Ontology}''.
+In a Scheme program, we would have to write, test, and debug functions that explicitly generated these lists;
+in a Prolog database, logical conditions such as ``{\em X is a mammal}'' or ``{\em T is descended from biological-region}'' are trivially easy to model directly,
+and the Prolog interpreter itself searches for all variable bindings that fit the model.
+
+In order to use the Prolog extension language, the \Makefile\ must be translated from GNU Make syntax to a similar Prolog syntax that we call a ``Makeprog''.
+This mapping is straightforward (and can be performed automatically by \biomake): the translation of Figure~2 is shown in Figure~3.
+Following this step, Prolog facts can be inserted directly into the Makeprog; furthermore, Prolog terms can be attached as extra qualifiers to the recipes (Figure~4).
+
+\begin{figure}
+\begin{Verbatim}[frame=single]
+'$X.$Y.alignment' <-- ['$X.fasta','$Y.fasta'],
+    'align $X $Y >$@'.
+\end{Verbatim}
+\caption{
+  A ``Makeprog'' Prolog translation of the \Makefile\ recipe in Figure~2.
+}
+\end{figure}
+
+\begin{figure}
+\begin{Verbatim}[frame=single]
+vertebrate(chicken).
+mammal(pig).
+mammal(cow).
+primate(chimp).
+primate(human).
+mammal(X) :- primate(X).
+vertebrate(X) :- mammal(X).
+
+mammal_pair(X,Y) :-
+ mammal(X),
+ mammal(Y),
+ X @< Y.
+
+mammals <-- Deps, 
+ {findall( t([X,'.',Y,'.alignment']),
+           mammal_pair(X,Y),
+           Deps )}.
+\end{Verbatim}
+\caption{
+  An addition to the Prolog Makeprog of Figure~3 that includes a target, ``mammals'', to build alignments
+  for all ordered pairs of mammals known to the database (here {\tt @<} is the syntax for alphabetic comparison of Prolog atoms).
+}
+\end{figure}
 
 \section*{Acknowledgements}
 
