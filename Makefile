@@ -8,3 +8,8 @@ main.pdf: main.tex references.bib
 	bibtex main
 	pdflatex $<
 	pdflatex $<
+
+clean:
+	rm *.toc *.log *.blg *.out *.pdf *.aux *.nav *.vrb *.snm *~
+
+.SECONDARY:
