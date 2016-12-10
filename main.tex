@@ -1,6 +1,7 @@
 \documentclass{bioinfo}
 
 \usepackage{fancyvrb}
+\usepackage{float}
 
 \copyrightyear{2016} \pubyear{2016}
 
@@ -10,8 +11,8 @@
 \usepackage{url}
 
 % Definitions
-\newcommand\make{{\tt make}}
 \newcommand\Makefile{{\tt Makefile}}
+\newcommand\make{{\tt make}}
 \newcommand\biomake{{\tt biomake}}
 
 % Document
@@ -33,9 +34,16 @@ $^{\text{\sf 2}}$Lawrence Berkeley National Laboratory, 1 Cyclotron Rd, Berkeley
 
 \abstract{
 {\bf Motivation.}
+The Unix ``make'' program is widely used in bioinformatics pipelines,
+but suffers from problems that limit its application to large analysis datasets.
+These include reliance on file modification times to determine whether a target is stale,
+lack of support for parallel execution on clusters, and restricted flexibility to extend the underlying logic program.
 {\bf Results.}
+We present BioMake, a faithful reimplementation that is compatible with most features of GNU Make,
+and adds support for popular cluster-based job-queue engines, MD5 hashes as an alternative to timestamps, and logic programming extensions in Prolog.
 {\bf Availability and Implementation.}
-\url{https://github.com/cmungall/biomake} under the Creative Commons Attribution 3.0 US license.
+BioMake is available from \url{https://github.com/cmungall/biomake} under the Creative Commons Attribution 3.0 US license.
+The only dependency is SWI-Prolog, available from \url{http://www.swi-prolog.org/}.
 {\bf Contact.}
 Ian Holmes {\tt ihholmes+biomake@gmail.com} or Chris Mungall {\tt cmungall+biomake@gmail.com}.
 {\bf Supplementary Information.}
@@ -44,7 +52,7 @@ None.
 
 \maketitle
 
-\section{Methods}
+\section*{Methods}
 
 The familiar Unix \make\ utility has become a favored tool for ``bioinformatics in-the-large'' \citep{ParkerGorlickLee2003}.
 Alongside many more elaborate workflow management systems, \make\ holds its own for several reasons.
@@ -72,7 +80,7 @@ For example, in the \Makefile\ snippet shown in Figure~1,
 if {\tt sortfasta} is a utility that sorts sequences in a FASTA file and regularizes them to 50 characters per line, then changing the sequence order or formatting
 of a file {\tt seqs.fasta} will not cause the BLAST job for {\tt seqs.blast} to be re-run.
 
-\begin{figure}
+\begin{figure}[H]
 \begin{Verbatim}[frame=single]
 %.sorted.fasta: %.fasta
     sortfasta $< >$@
@@ -102,10 +110,12 @@ the same machine that \biomake\ is being run on.
 {\bf (3) Multiple wildcards per filename.}
 \make\ only allows a single wildcard (``stems'') in a filename,
 represented by the percent symbol ({\tt \%}) in the head of a recipe and by the automatic variable {\tt \$*} in the body.
-In contrast, \biomake\ allows multiple wildcards: any unbound variable that appears in the head of a rule can serve as a wildcard.
+In contrast, \biomake\ allows multiple wildcards: any unbound variable that appears in the head of a recipe can serve as a wildcard,
+and can subsequently be used in the body of the recipe.
 For example, the recipe in Figure~2 creates an alignment file {\tt \$X.\$Y.alignment} from any two files {\tt \$X.fasta} and {\tt \$Y.fasta}.
 
-\begin{figure}
+
+\begin{figure}[H]
 \begin{Verbatim}[frame=single]
 $X.$Y.alignment: $X.fasta $Y.fasta
     align $X $Y >$@
@@ -117,7 +127,22 @@ $X.$Y.alignment: $X.fasta $Y.fasta
 }
 \end{figure}
 
-\begin{figure}
+{\bf (4) Facile integration with ontologies and description logics.}
+GNU Make's domain-specific language extensions are based on Scheme, which is a functional language,
+but the underlying structure of a Makefile (rules such as ``{\em to build A, you must first build B}'' and ``{\em to build B, you must first build C and D}'')
+is a logic program.
+\biomake's domain-specific language is Prolog, making it trivially easy to incorporate ontologies and description logics
+such as the Gene Ontology \citep{GeneOntology2000,GeneOntology2015}, the Sequence Feature Ontology \citep{SequenceOntology2005} or the Protein Feature Ontology \citep{ProteinFeatureOntology2008}.
+For example, we can easily create \biomake\ recipes for targets such as ``{\em the whole-genome alignment for species X and Y, where X is a mammal and Y is a vertebrate}''
+or ``{\em the GFF file containing co-ordinates of every human genomic feature of type T, where T is a term descended from `biological-region' in the Sequence Ontology}''.
+In a Scheme program, we would have to write, test, and debug functions that explicitly generated these lists;
+in a Prolog database, logical conditions such as ``{\em X is a mammal}'' or ``{\em T is descended from biological-region}'' are trivially easy to model directly,
+and the Prolog interpreter itself searches for all variable bindings that fit the model.
+
+In order to use the Prolog extension language, the \Makefile\ must be translated from GNU Make syntax to a similar Prolog syntax that we call a ``Makeprog''.
+This mapping is straightforward (and can be performed automatically by \biomake): the translation of Figure~2 is shown in Figure~3.
+Following this step, Prolog facts can be inserted directly into the Makeprog; furthermore, Prolog terms can be attached as extra qualifiers to the recipes (Figure~4).
+\begin{figure}[H]
 \begin{Verbatim}[frame=single]
 '$X.$Y.alignment' <-- ['$X.fasta','$Y.fasta'],
     'align $X $Y >$@'.
@@ -127,7 +152,7 @@ $X.$Y.alignment: $X.fasta $Y.fasta
 }
 \end{figure}
 
-\begin{figure}
+\begin{figure}[H]
 \begin{Verbatim}[frame=single]
 vertebrate(chicken).
 mammal(pig).
@@ -153,26 +178,9 @@ mammals <-- Deps,
 }
 \end{figure}
 
-{\bf (4) Facile integration with ontologies and description logics.}
-GNU Make's domain-specific language extensions are based on Scheme, which is a functional language,
-but the underlying structure of a Makefile (rules such as ``{\em to build A, you must first build B}'' and ``{\em to build B, you must first build C and D}'')
-is a logic program.
-\biomake's domain-specific language is Prolog, making it trivially easy to incorporate ontologies and description logics
-such as the Gene Ontology \citep{GeneOntology2015}, the Sequence Feature Ontology \citep{SequenceOntology2005} or the Protein Feature Ontology \citep{ProteinFeatureOntology2008}.
-For example, we can easily create \biomake\ recipes for targets such as ``{\em the whole-genome alignment for species X and Y, where X is a mammal and Y is a vertebrate}''
-or ``{\em the GFF file containing co-ordinates of every human genomic feature of type T, where T is a term descended from `biological-region' in the Sequence Ontology}''.
-In a Scheme program, we would have to write, test, and debug functions that explicitly generated these lists;
-in a Prolog database, logical conditions such as ``{\em X is a mammal}'' or ``{\em T is descended from biological-region}'' are trivially easy to model directly,
-and the Prolog interpreter itself searches for all variable bindings that fit the model.
-
-
-In order to use the Prolog extension language, the \Makefile\ must be translated from GNU Make syntax to a similar Prolog syntax that we call a ``Makeprog''.
-This mapping is straightforward (and can be performed automatically by \biomake): the translation of Figure~2 is shown in Figure~3.
-Following this step, Prolog facts can be inserted directly into the Makeprog; furthermore, Prolog terms can be attached as extra qualifiers to the recipes (Figure~4).
-
-\section*{Acknowledgements}
-
-\biomake\ was written by Chris Mungall and Ian Holmes.
+%\section*{Acknowledgements}
+%
+%\biomake\ was written by Chris Mungall and Ian Holmes.
 
 \section*{Funding}
 
