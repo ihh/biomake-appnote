@@ -27,13 +27,13 @@ None.
 The familiar Unix \make\ utility has become a favored tool for ``bioinformatics in-the-large'' \citep{ParkerGorlickLee2003}.
 Alongside more elaborate workflow management systems, \make\ holds its own for several reasons.
 Besides being ubiquitous and easy to use, with a simple syntax, it offers a powerful mix
-of {\em declarative logic} (the specification of target-dependency relationships at the head of \Makefile\ recipes, from which \make\ deduces build chains)
-with {\em Unix scripting} (the lines of shell script that make up the body of recipes).
-GNU Make combines these elements with {\em functional programming}-inspired manipulation of text variables, lists, and directories
-(GNU Make offers a number of built-in functions for such purposes, and includes Guile --- GNU's Scheme interpreter --- as an extension language).
+of {\em declarative logic} (the specification of target-dependency relationships from which Make deduces build chains)
+with {\em Unix scripting} (the lines of shell script that are executed when the build chain runs).
+GNU Make combines these elements with {\em functional programming}-inspired manipulation of text variables, lists, and directories,
+and includes Guile --- GNU's Scheme interpreter --- as an extension language.
 
-In our usage of \make\ for data analysis, a common pattern is to analyze one or two examples manually, building up a \Makefile\ recipe (or set of recipes),
-then to scale the analysis up to the whole dataset.
+In our usage of \make\ for data analysis, a common pattern is to analyze one or two examples manually, building up a \Makefile\ recipe (or recipes),
+then scale the analysis up to the whole dataset.
 Makefiles remain, in our opinion, unrivalled for this purpose.
 However, GNU Make's origins were as a tool for managing build pipelines, not large-scale data analyses, and it has several flaws that impede its use in bioinformatics.
 
@@ -47,26 +47,7 @@ Chief innovations of \biomake\ include:
 This is fragile, especially on networked filesystems or cloud storage, where file timestamps may not be preserved or synchronized.
 In projects where a big data analysis can take hours or days, a spurious rebuild can be devastating, especially if it triggers further rebuilding of downstream targets.
 Instead of using timestamps, \biomake\ can be directed to use MD5 checksums: whenever a target is built, the MD5 hashes of that file and its dependents are recorded
-and stored. This can be used in combination with \Makefile\ recipes that sort or canonicalize data to further prevent spurious rebuilds.
-%For example, in the \Makefile\ snippet shown in Figure~1,
-%if {\tt sortfasta} is a utility that sorts sequences in a FASTA file and regularizes them to 50 characters per line, then changing the sequence order or formatting
-%of a file {\tt seqs.fasta} will not cause the BLAST job for {\tt seqs.blast} to be re-run.
-
-%\begin{figure}[H]
-%\begin{Verbatim}[frame=single]
-%%.sorted.fasta: %.fasta
-%    sortfasta $< >$@
-%
-%%.blast: %.sorted.fasta
-%    blastn -db $(DATABASE) -query $< >$@
-%\end{Verbatim}
-%\caption{
-%  A hypothetical \Makefile\ that sorts a sequence file before BLASTing it.
-%  If MD5 signatures (rather than timestamps) are used to trigger builds, as is an option in \biomake,
-%  then a reformatting of the {\tt .fasta} file that leads to an identical {\tt .sorted.fasta} file
-%  will not trigger a rebuild of the {\tt .blast} file, even if the timestamps have changed.
-%}
-%\end{figure}
+and stored. This can be used in combination with \Makefile\ recipes that sort or canonicalize data to further guard against spurious rebuilds.
 
 {\bf (2) Support for cluster-based job queues.}
 \make\ can run multiple jobs in parallel, but only on one machine.
@@ -92,7 +73,8 @@ GNU Make's domain-specific language extensions are based on Scheme, which is a f
 but the underlying structure of a Makefile (rules such as ``{\em to build A, you must first build B}'' and ``{\em to build B, you must first build C and D}'')
 is a logic program.
 \biomake's domain-specific language is Prolog, making it trivially easy to incorporate ontologies and description logics
-such as the Gene Ontology \citep{GeneOntology2000,GeneOntology2015}, the Sequence Feature Ontology \citep{SequenceOntology2005} or the Protein Feature Ontology \citep{ProteinFeatureOntology2008}.
+such as the Gene Ontology \citep{GeneOntology2015} or the Sequence Feature Ontology \citep{SequenceOntology2005}.
+% or the Protein Feature Ontology \citep{ProteinFeatureOntology2008}.
 For example, we can easily create \biomake\ recipes for targets such as ``{\em the whole-genome alignment for species X and Y, where X is a mammal and Y is a vertebrate}''
 or ``{\em the GFF file containing co-ordinates of every human genomic feature of type T, where T is a term descended from `biological-region' in the Sequence Ontology}''.
 In a Scheme program, we would have to write, test, and debug functions that explicitly generated these lists;
@@ -112,13 +94,13 @@ sp(zebrafish).
 
 ordered_pair(X,Y) :- sp(X),sp(Y),X@<Y.
 
-make_filename(F) :-
+align_filename(F) :-
   ordered_pair(X,Y),
   format(atom(F),"align-~w-~w",[X,Y]).
 
 endprolog
 
-all: $(bagof F,make_filename(F))
+all: $(bagof F,align_filename(F))
 
 align-$X-$Y: $X.fa $Y.fa { ordered_pair(X,Y) }
     align $X.fa $Y.fa > $@
@@ -158,7 +140,7 @@ PRISM is a probabilistic dialect of Prolog that was used to implement HMMs, trel
 
 \section*{Funding}
 
-This work has been supported by NHGRI grant R01-HG004483.
+This work was partially supported by NHGRI grant R01-HG004483.
 
 \bibliographystyle{natbib}
 %\bibliographystyle{bioinformatics}
