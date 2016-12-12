@@ -395,7 +395,7 @@
 \def\@@title#1{\authormark{#1}\@@@title{#1}}
 \long\def\@@@title#1{\gdef\@title{#1}}
 \long\def\subtitle#1{\gdef\@subtitle{#1}}
-\subtitle{Genome analysis}
+\subtitle{Databases and ontologies}
 
 \long\def\author{\@ifnextchar[{\short@uthor}{\@uthor}}
 \def\short@uthor[#1]{\authormark{#1}\@@author}
