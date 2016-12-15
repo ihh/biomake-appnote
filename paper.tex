@@ -122,7 +122,7 @@ This example is discussed in greater detail in the {\tt README.md} file of the \
 
 We can contrast \biomake\ with other solutions for bioinformatics workflow management.
 Systems such as CWL\footurl{http://commonwl.org/} or Galaxy\footurl{https://usegalaxy.org/} have many useful features such as web interfaces and cloud support,
-but they do not deduce the workflow from a series of declaratively-specified dependencies: rather, they require explicit specification of inputs, outputs, and ordering of tasks.
+but they do not deduce the workflow from a graph of dependencies: rather, they require explicit specification of connections between tasks.
 
 There are also other GNU Make clones and variants, including some in functional/parallel languages (Erlang make\footurl{http://erlang.org/doc/man/make.html}),
 offering MD5 signatures (omake\footurl{http://omake.metaprl.org/}, makepp\footurl{http://makepp.sourceforge.net/})
