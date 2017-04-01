@@ -1,0 +1,73 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf810
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fswiss\fcharset0 ArialMT;}
+{\colortbl;\red255\green255\blue255;\red26\green26\blue26;\red255\green255\blue255;}
+{\*\expandedcolortbl;;\cssrgb\c13333\c13333\c13333;\cssrgb\c100000\c100000\c100000;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Dear Alison,\
+\
+Thank you for your positive decision letter and for the attached reviews. We have implemented the suggested revisions in full and attach a revised version of the manuscript.\
+\
+The individual revisions are addressed point-by-point below. Changes to the accompanying manuscript are highlighted in red.\
+\
+Best wishes,\
+Ian Holmes & Chris Mungall\
+\
+\pard\pardeftab720\sl300\partightenfactor0
+
+\f1\fs25\fsmilli12800 \cf2 \cb3 \expnd0\expndtw0\kerning0
+\ul \ulc2 \outl0\strokewidth0 \strokec2 Reviewer #1\ulnone \
+
+\i The only big omissions I think the authors make are: (1) no discussion of SnakeMake (which is pretty similar and really well regarded)\
+
+\i0 \
+In the revised manuscript, we mention SnakeMake and include it in the supplementary Feature Comparison table.\
+\
+
+\i (2) no discussion of cloud deployment. A lot of people are moving away from HPC batch systems and this tool seems lacking in being able to deploy in virtualized environments where fewer people are deploying traditional batch systems.\
+
+\i0 \
+This would indeed be a useful and complementary way to extend BioMake. We have added a note on cloud deployment to the discussion.\
+\
+
+\i I do question if this instantiation of make is truly a superset of Make - do they support Make's horrid recursive syntax, for example? Can they run any arbitrary Make file?\
+
+\i0 \
+We have clarified that BioMake implements a (large) subset of GNU Make syntax, and referred readers to the project homepage, which details the feature overlap in full.\
+\
+\
+\ul Reviewer #2\ulnone \
+
+\i Platform compatibility (Linux, Mac, and Windows) is not mentioned in the paper or documentation.\
+
+\i0 \
+We have added a note on compatibility.\
+\
+
+\i 1) In the last sentence of Introduction, the \'93flaws\'94 are not mentioned.\
+
+\i0 \
+We have added a sentence summarizing the flaws.\
+\
+
+\i 2) SWI-Prolog version requirement is not mentioned.\
+
+\i0 \
+The SWI-Prolog version requirement is now explicitly stated.\
+\
+
+\i 3) Discussion of differences from similar tools is too brief (the second paragraph in Discussion). Brief descriptions of the difference compared to each of those tools in text or table are recommended.\
+
+\i0 \
+The suggested feature comparison table is now available in the Supplementary Information.\
+\
+\ul Reviewer #3\ulnone \
+
+\i It's worth mentioning the version of SWI-Prolog required for BioMake. I started\
+with the version available in Ubuntu 14.04 (swi-prolog 6.6.4-2ubuntu1) and get\
+some unfriendly errors: [...error message...]
+\i0 \
+\
+This is indeed due to a SWI-Prolog versioning issue. We now mention the version requirement explicitly in the text.\
+}
